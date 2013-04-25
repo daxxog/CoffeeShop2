@@ -15,6 +15,7 @@
         "url"  : "https://github.com/daxxog/CoffeeShop2.git"
     }],
     "dependencies": {
+        "express": "*"
     },
     "bin": {
         "coffeeshop" : "./bin/CoffeeShop2"

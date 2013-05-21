@@ -34,6 +34,7 @@
         this.secret = 'secret';
         
         this.listenArgs = arguments;
+        this._attach(this.app);
     };
     
     cs.prototype.ring = function(ring) {
@@ -53,6 +54,35 @@
     cs.prototype.secret = function(val) {
         this.secret = (typeof val == 'string') ? val : 'secret';
         
-        return this;
+        return this; //chain
     };
+    
+    cs.prototype.listen = function() {
+        this.http.listen.apply(this.http, this.listenArgs);
+        
+        return this; //chain
+    };
+    
+    cs.prototype._attach = function(app) {
+        this.once = app.once = function(fu) { //Returns a function that will run once and only once.
+            var extfu = {};
+    
+            extfu = function(fu) { //object that runs a function that returns a function! #codeception
+                return (function(extfu) {
+                    return function() {
+                        if(!extfu.ran) { //if the function hasn't run
+                            extfu.ran = true; //we ran it
+                            return fu(); //run function and return the result
+                        }
+                    };
+                })(this);
+            };
+    
+            extfu.prototype.ran = false; //we didn't run it yet
+    
+            return new extfu(fu); //create some #codeception
+        };
+    };
+    
+    return cs;
 }));

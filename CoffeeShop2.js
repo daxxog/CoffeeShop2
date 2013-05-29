@@ -38,6 +38,7 @@
         
         this.listenArgs = arguments;
         this._attach(this.app);
+        this.defaultMode();
     };
     
     cs.prototype.ring = function(ring) {
@@ -68,6 +69,8 @@
             client: this.client,
             secret: this._secret
         });
+        
+        this.doMode(); //drop into the correct mode (production / dev)
         
         var _after_init = function() {
             that._bind.forEach(function(v, i, a) { //run all the bind functions
@@ -147,6 +150,14 @@
         
         if(typeof mixed == 'object') { //if we are binding a dynamic server
             this._bind.push(function() { //push an action to do later
+                if(typeof mixed.bind != 'function' && typeof mixed.b == 'function') { //new api to work flawlessly with old API
+                    mixed.bind = function(pass, grab, data) {
+                        mixed.b(function(what) {
+                            return grab(what, pass);
+                        }, data);
+                    };
+                }
+                
                 mixed.bind([that.app, express, that.io, that.client, null], that.grab, data); //bind the dynamic server
             });
         } else if(typeof mixed == 'function') { //if we are binding an init function
@@ -307,29 +318,50 @@
                 cs.sockInterval = interval; //set it
             }
             
-            var parseSessID = function(id) { //private function for parsing session IDs into what REDIS stores them as
-                var _id = id.toString().split('.');
-                return _id[0].replace('s:', 'sess:');
+            var parseSessID = function(cookie, hash) { //private function for parsing session IDs into what REDIS stores them as
+                var _id = ((typeof cookie[hash] == 'string') ? cookie[hash] : '').toString().split('.');
+                var _parse = (_id.length > 0) ? _id[0].replace('s:j:', '') : false;
+                
+                if(_parse === false) {
+                    return false;
+                } else {
+                    var _continue = true,
+                        _parsed;
+                    
+                    try {
+                        _parsed = JSON.parse(_parse).id;
+                    } catch(e) {
+                        _continue = false;
+                    }
+                    
+                    if(_continue === false) {
+                        return false;
+                    } else {
+                        return hash + '_' + _parsed;
+                    }
+                }
             };
             
             that.io.set('authorization', function(data, accept) { //socket authorization
                 if(data.headers.cookie) { //if we have a cookie
                     data.cookie = cookie.parse(data.headers.cookie); //parse the cookie
-                    data.sessionID = parseSessID(data.cookie[' prosess']); //parse the sessionID
+                    data.sessionID = parseSessID(data.cookie, 'prosess'); //parse the sessionID
                     
-                    console.log(data.sessionID, data.cookie);
-                    
-                    that.client.get(data.sessionID, function(err, _data) { //grab the session from redis
-                        if(that.error(err, 'Redis error while doing socket authorization.')) { //check for errors
-                            var obj = JSON.parse(_data); //parse the redis response into an object
-                            
-                            cs.sockAuth(obj, accept, function(id) { //setId
-                                data.userID = id; //set the userID in the socket
-                            });
-                        } else {
-                            accept('Redis error while doing socket authorization.', false); //check for errors
-                        }
-                    });
+                    if(data.sessionID === false) {
+                        accept('ID parse error.', false);
+                    } else {
+                        that.client.get(data.sessionID, function(err, _data) { //grab the session from redis
+                            if(that.error(err, 'Redis error while doing socket authorization.')) { //check for errors
+                                var obj = JSON.parse(_data); //parse the redis response into an object
+                                
+                                that.sockAuth(obj, accept, function(id) { //setId
+                                    data.userID = id; //set the userID in the socket
+                                });
+                            } else {
+                                accept('Redis error while doing socket authorization.', false); //check for errors
+                            }
+                        });
+                    }
                 } else {
                     accept('No cookie transmitted.', false); //check for errors
                 }
@@ -350,6 +382,56 @@
                 });
             });
         }
+    };
+    
+    cs.prototype._mode_t_parse = function(_type) {
+        var type = (typeof _type == 'boolean') ? type : (type === 'production'),
+            typeN = (type === true) ? 1 : 0,
+            modeStr = 'mode_' + typeN;
+        
+        return {
+            type: type,
+            typeN: typeN,
+            modeStr: modeStr
+        };
+    };
+    
+    cs.prototype.mode = function(_type, bi) {
+        var t = this._mode_t_parse(_type);
+        
+        if(typeof bi == 'function') {
+            this.ev(t.modeStr, bi);
+        } else {
+            this._mode = t.type;
+        }
+    };
+    
+    cs.prototype.doMode = function() {
+        this.ev(this._mode_t_parse(this._mode).modeStr);
+    };
+    
+    cs.prototype.defaultMode = function() {
+        var that = this;
+        
+        this._mode = this._mode_t_parse('production').type;
+        
+        this.mode('production', function() { //socket.io production settings https://github.com/LearnBoost/Socket.IO/wiki/Configuring-Socket.IO
+            that.io.enable('browser client minification');  // send minified client
+            that.io.enable('browser client etag');          // apply etag caching logic based on version number
+            that.io.enable('browser client gzip');          // gzip the file
+            that.io.set('log level', 1);                    // reduce logging
+            that.io.set('transports', [                     // enable all transports (optional if you want flashsocket)
+                'websocket'
+              , 'flashsocket'
+              , 'htmlfile'
+              , 'xhr-polling'
+              , 'jsonp-polling'
+            ]);
+        });
+        
+        this.mode('production', function() { //express compression
+            that.app.use(express.compress());
+        });
     };
     
     cs.prototype._attach = function(app) { //attach cs prototypes to "app" object
@@ -373,6 +455,36 @@
                 }
             }
         });
+    };
+    
+    cs.prototype.ev = function(e, cb) { //run / on event - https://github.com/daxxog/ev/blob/master/ev.js
+        var ev = this.ev;
+        
+        if(typeof ev._ == 'undefined') {
+            ev._ = {};
+        }
+        
+        if(typeof e == 'string') {
+            if(!Array.isArray(ev._[e])) {
+                ev._[e] = [];
+            }
+            
+            if(typeof cb == 'function') { //if we have a function
+                return ev._[e].push(cb); //push it on the stack
+            } else if(cb === 'k') { //if we want to kill an event now
+                ev._[e].forEach(function(v, i, a) { // loop and
+                    delete ev._[e][i];              // kill all events
+                });
+            } else { //execute event
+                ev._[e].forEach(function(v, i, a) { // loop and
+                    if(typeof v == 'function') { //find functions
+                        if(v() === 'k') { //if we should kill this function after running
+                            delete ev._[e][i]; //delete the function
+                        }
+                    }
+                });
+            }
+        }
     };
     
     return cs;

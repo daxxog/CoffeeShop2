@@ -6,9 +6,7 @@
  */
 
 var CoffeeShop = require('./CoffeeShop2'),
-    dynamic = require('./dynamic'); //,
-    /*error = require('./error'),
-    init = require('./init');*/
+    dynamic = require('./dynamic');
     
 var cs = new CoffeeShop(7777);
 
@@ -16,8 +14,4 @@ cs
     .secret('1337')
     .ring()
     .bind(dynamic)
-    .bind()
-    .bind('./static/test.txt', '404')
 .listen();
-
-console.log(cs._mwstack);

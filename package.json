@@ -15,7 +15,12 @@
         "url"  : "https://github.com/daxxog/CoffeeShop2.git"
     }],
     "dependencies": {
-        "express": "*"
+        "express": "*",
+        "async": "*",
+        "socket.io": "*",
+        "prosess": "*",
+        "cookie": "*",
+        "redis-ring": "*"
     },
     "bin": {
         "coffeeshop" : "./bin/CoffeeShop2"

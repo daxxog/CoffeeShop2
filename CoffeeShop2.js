@@ -489,11 +489,5 @@
         }
     };
     
-    if(require.main === module) { //CLI
-        console.log('Streaming..');
-        fs.createReadStream(path.join(__dirname, 'server_blank.js')).pipe(fs.createWriteStream('server.js'));
-        fs.createReadStream(path.join(__dirname, 'dynamic_blank.js')).pipe(fs.createWriteStream('dynamic.js'));
-    }
-    
     return cs;
 }));

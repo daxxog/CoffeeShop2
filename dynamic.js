@@ -1,6 +1,6 @@
 /* CoffeeShop2 / dynamic.js
  * example of a dynamic server [serve up that express-o in your coffeeshop.js]
- * (c) 2012 David (daXXog) Volm ><> + + + <><
+ * (c) 2013 David (daXXog) Volm ><> + + + <><
  * Released under Apache License, Version 2.0:
  * http://www.apache.org/licenses/LICENSE-2.0.html  
  */
@@ -25,7 +25,7 @@
     dynamic.b = function(grab, data) {
         var app = grab('app');
         
-        app.get('/expresso', function(req, res) {
+        app.get('/', function(req, res) {
             req.prosess.skill = 'Hello World!';
             req.prosess.user = 'daxxog';
             

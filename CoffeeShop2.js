@@ -78,7 +78,9 @@
             });
             delete that._bind; //remove all bind functions after we are done running them
             
-            that.app.use(that.stack('static'));
+            if(typeof that.stack('static') != 'undefined') {
+                that.app.use(that.stack('static'));
+            }
             
             if(typeof that.four_o_four == 'string') {
                 that.load('404', function(err) {
@@ -486,6 +488,10 @@
             }
         }
     };
+    
+    if(require.main === module) { //CLI
+        console.log('cli')
+    }
     
     return cs;
 }));

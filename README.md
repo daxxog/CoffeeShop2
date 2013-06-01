@@ -7,7 +7,7 @@ Install
 -------
 stable
 ```bash
-npm install CoffeeShop2
+npm install coffeeshop
 ```
 edge
 ```bash

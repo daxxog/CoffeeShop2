@@ -3,19 +3,19 @@
     "description" : "CoffeeShop full stack.. just got better.",
     "homepage"    : "https://github.com/daxxog/CoffeeShop2",
     "main"        : "CoffeeShop2.js",
-    "version"     : "0.2.4",
+    "version"     : "0.2.5",
     "engines": { "node" : ">=0.7.0" },
     "maintainers": [{
         "name"  : "David Volm",
         "email" : "david@volminator.com",
         "web"   : "http://daxxog.com/"
     }],
-    "repositories": [{
+    "repository": {
         "type" : "git",
         "url"  : "https://github.com/daxxog/CoffeeShop2.git"
-    }],
+    },
     "dependencies": {
-        "express": "*",
+        "express": "3.3.5",
         "async": "*",
         "socket.io": "*",
         "prosess": "*",
